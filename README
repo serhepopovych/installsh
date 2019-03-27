@@ -1,0 +1,75 @@
+Simple installer for small projects
+===================================
+
+There are use cases when project or simple set of filesystem entries
+needed to be installed on target system or on build host for further
+packaging to RPM/DEB/... package.
+
+Implementing Makefile for this purpose might not be possible or
+acceptable because of dependency on make(1) that might not be available
+on small (embedded) systems.
+
+Furthermore install target in Makefile most of the times wraps shell
+script and therefore using make(1) for this purpose looks even less
+reasonable.
+
+Features
+--------
+
+  o Direct installation on target system as superuser
+  o Packaging installation on build system
+  o Template expansion during install (e.g. @target@ ->
+    target system path)
+  o Customization through vars-sh and install-sh files
+    sourced from install.sh
+  o Wrapper deploy.sh to parse command line arguments to
+    environment variables used by install.sh
+  o Recursive installation for .subprojects/ with same
+    codebase
+  o POSIX Shell compliant (i.e. no bash(1) extensions)
+    with minimal set of coreutils provided binaries
+    (e.g. cp(1))
+
+Usage
+-----
+
+Following steps could be used to connect this repository as submodule
+to your project:
+
+  # Go do project's directory
+  $ cd <project_dir>
+
+  # Attach installsh project as submodule
+  $ git submodule add https://github.com/serhepopovych/installsh.git \
+  .subprojects/installsh
+
+  # Initialize and clone it
+  $ git submodule update --init --recursive
+
+  # Symlink to project's directory. This will be default SOURCE
+  # directory of installation unless explicitly given.
+  $ ln -snf .subprojects/installsh/install.sh
+  $ ln -snf .subprojects/installsh/deploy.sh
+
+  # Add default vars-sh
+  $ cat >>vars-sh <<'_EOF'
+# Inherit subproject(s) variables
+inherit '.subprojects/installsh'
+_EOF
+
+  # Optionally create and customize install-sh
+
+Customization
+-------------
+
+Unless explicitly required install.sh and deploy.sh shouldn't be
+customized to change behaviour for specific project. Bug fixes,
+improvements and new features aren't subject of this restrictions
+and should be generally fixed in upstream project at github page:
+
+  https://github.com/serhepopovych/installsh.git
+
+If specific actions required during the install for your project
+consider adding them to install-sh. Also you might want to modify
+vars-sh to set/unset specific variables (e.g. add new template for
+expansion during install) or functions.
