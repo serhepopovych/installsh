@@ -53,8 +53,9 @@ to your project:
 
   # Add default vars-sh
   $ cat >>vars-sh <<'_EOF'
+
 # Inherit subproject(s) variables
-inherit '.subprojects/installsh'
+inherit 'installsh/vars-sh'
 _EOF
 
   # Optionally create and customize install-sh
