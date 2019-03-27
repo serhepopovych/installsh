@@ -420,7 +420,10 @@ walk_paths()
 	done
 }
 
-# Usage: exec_vars() [NAME=VAL...] [--] <command> [<args>...]
+# Usage: exec_vars() [NAME=VAL...] [--] [func opts] [--] <command> [<args>...]
+# where <func opts> are
+#   -s <subsep>    substring separator used to split <args> list
+#   -e             use "eval" to run <command>
 exec_vars()
 {
 	local func="${FUNCNAME:-exec_vars}"
@@ -437,7 +440,46 @@ exec_vars()
 		shift
 	done
 
-	eval "$@"
+	# Parse <func opts> using getopts(1) in subshell to avoid
+	# collision with possible outer getopts(1) usage (i.e. when
+	# we are called form getopts(1) processing loop).
+	local nr=0 subsep='' eval=''
+	eval "$(
+		# To communicate with outside of this subshell
+		# provide evaluable statements on standard output.
+
+		# Subshell local variables: c, subsep, eval
+
+		while getopts 's:e' c; do
+			case "$c" in
+				s) subsep="$OPTARG" ;;
+				e) eval='eval' ;;
+				*) printf -- 'return 1'; return 0 ;;
+			esac
+		done
+
+		printf -- 'nr="%s" subsep="%s" eval="%s"\n' \
+			$((OPTIND - 1)) "$subsep" "$eval"
+	)"
+	shift "$nr"
+
+	local command="$1"
+	shift
+
+	if [ -n "$subsep" ]; then
+		# Treat args as single string and use substring separator
+		# (subsep) to split it to a list of arguments.
+		local args="$*"
+
+		local __ifs="${IFS}"
+		IFS="$subsep"
+
+		set -- $args
+
+		IFS="${__ifs}"
+	fi
+
+	$eval "$command" "$@"
 }
 
 # Usage: inherit() <subproject>/<path_to_file>
@@ -447,9 +489,12 @@ inherit()
 
 	local f="${1:?missing 1st arg to ${func}() (<subproject>/<path_to_file>)}"
 	local sp="$SOURCE/.subprojects/${f%%/*}"
-	f="${f#*/}"
+	f="$sp/${f#*/}"
 
-	[ ! -f "$sp/$f" ] || exec_vars SOURCE="$sp" -- . "\$SOURCE/$f"
+	if [ -f "$f" ]; then
+		local SOURCE="$sp"
+		. "$f"
+	fi
 }
 
 # Usage: subst_templates_sed <file>
@@ -528,7 +573,7 @@ reg_file_copy()
 		if [ -n "$DO_SUBST_TEMPLATES" ]; then
 			# Copy source to temporary destination
 			t="$(mktemp "$d.XXXXXXXX")" && cp -fd "$s" "$t" &&
-				exec_vars L='' -- subst_templates "'$t'" || return
+				exec_vars L='' -- subst_templates "$t" || return
 
 			if [ -d "$d" ] || ! cmp -s "$t" "$d"; then
 				# Backup if needed before installing
@@ -761,8 +806,8 @@ MARK_FILE="$WORK_DIR/do-$NAME"
 
 if [ -e "$MARK_FILE" ]; then
 	exec_vars L='S' -- \
-		log_msg "'skipping as already installed (mark file "%s" exist)\n'" \
-			"'${MARK_FILE#$DEST/}'"
+		log_msg 'skipping as already installed (mark file "%s" exist)\n' \
+			"${MARK_FILE#$DEST/}"
 	exit 0
 else
 	: >"$MARK_FILE" ||
@@ -782,8 +827,8 @@ exit_handler()
 {
 	local rc=$?
 	if [ $rc -ne 0 ]; then
-		exec_vars V=1 -- msg "'%s: install exited with error %d\n'" \
-			"'$NAME/install.sh'" $rc
+		exec_vars V=1 -- msg '%s: install exited with error %d\n' \
+			"$NAME/install.sh" $rc
 	fi
 
 	if [ -z "$PARENT" ]; then
