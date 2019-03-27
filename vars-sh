@@ -1,6 +1,6 @@
 
 # Inherit subproject(s) variables
-inherit '.<subproject>/<path_to_file>.'
+inherit '.subprojects/<path_to_file>'
 
 ## Note that some parameters could be passed via environment
 
