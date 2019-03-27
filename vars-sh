@@ -4,6 +4,31 @@ inherit '.<subproject>/<path_to_file>.'
 
 ## Note that some parameters could be passed via environment
 
+# Install project specific data
+DESTS="$DESTS"'
+'
+
+# Install system wide locations
+ROOTS="$ROOTS"'
+/bin
+/boot
+/dev
+/etc
+/home
+/lib
+/libx32
+/lib32
+/lib64
+/media
+/mnt
+/opt
+/root
+/sbin
+/srv
+/usr
+/var
+'
+
 SUBST_TEMPLATES="$SUBST_TEMPLATES"'
 -e "s|@target@|$TARGET|g"
 -e "s|@root@|$ROOT|g"

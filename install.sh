@@ -867,28 +867,12 @@ done
 log_msg '---- Stop subproject installations ----\n'
 
 # Install to the given destination (DEST)
-install_dest \
-	'/netctl'
+exec_vars -s '
+' install_dest "$DESTS"
 
 # Install system wide (ROOT) configuration files
-install_root \
-	'/bin'    \
-	'/boot'   \
-	'/dev'    \
-	'/etc'    \
-	'/home'   \
-	'/lib'    \
-	'/libx32' \
-	'/lib32'  \
-	'/lib64'  \
-	'/media'  \
-	'/mnt'    \
-	'/opt'    \
-	'/root'   \
-	'/sbin'   \
-	'/srv'    \
-	'/usr'    \
-	'/var'
+exec_vars -s '
+' install_root "$ROOTS"
 
 # Source project specific code
 install_sh="$SOURCE/install-sh"
