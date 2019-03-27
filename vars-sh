@@ -1,0 +1,27 @@
+
+# Inherit subproject(s) variables
+inherit '.<subproject>/<path_to_file>.'
+
+## Note that some parameters could be passed via environment
+
+SUBST_TEMPLATES="$SUBST_TEMPLATES"'
+-e "s|@target@|$TARGET|g"
+-e "s|@root@|$ROOT|g"
+'
+
+# Usage: subst_templates_base <file>
+subst_templates_base()
+{
+	# Remove extra slashes at the beginning (could be empty afterwards).
+	local DEST="${DEST##/}"
+	DEST="${DEST:+/$DEST}"
+	local TARGET="${TARGET##/}"
+	TARGET="${TARGET:+/$TARGET}"
+	local ROOT="${ROOT##/}"
+	ROOT="${ROOT:+/$ROOT}"
+
+	subst_templates_sed "$1"
+}
+
+# Register hook
+subst_templates_hook='subst_templates_base'

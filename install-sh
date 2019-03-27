@@ -1,0 +1,10 @@
+#!/bin/sh -e
+
+# Requires:
+
+# tmp, var/log
+adj_rights '' 2775 \
+	"$DEST/netctl/tmp" \
+	"$DEST/netctl/var/log"
+
+return 0
