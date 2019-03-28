@@ -700,9 +700,20 @@ prepare_file()
 		# Make sure we are not ending with '/'
 		[ -n "${f##*/}" ] || return
 
-		local d="$ROOT/${f%/*}"
+		local d="${f%/*}"
+		if [ -z "${d##/*}" ]; then
+			local t
+			subpath "$ROOT" "$d" t || return
+		else
+			d="$ROOT/$d"
+			f="$ROOT/$f"
+		fi
+
 		if [ ! -d "$d" ]; then
-			[ ! -e "$d" ] && mkdir -p "$d" || return
+			[ ! -e "$d" ] || return
+			# Try to remove if broken symlink.
+			[ ! -L "$d" ] || rm -f "$d" || return
+			mkdir -p "$d" || return
 		fi
 
 		# Create empty file
