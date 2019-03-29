@@ -72,7 +72,7 @@ log_msg()
 	log "$@"
 }
 
-# Usage: return_var() <rc> [<result> [<var>]]
+# Usage: return_var() <rc> <result> [<var>]
 return_var()
 {
 	local func="${FUNCNAME:-return_var}"
@@ -81,12 +81,10 @@ return_var()
 	local rv_result="$2"
 	local rv_var="$3"
 
-	if [ -n "${rv_result}" ]; then
-		if [ -n "${rv_var}" ]; then
-			eval "${rv_var}='${rv_result}'"
-		else
-			echo "${rv_result}"
-		fi
+	if [ -n "${rv_var}" ]; then
+		eval "${rv_var}='${rv_result}'"
+	else
+		echo "${rv_result}"
 	fi
 
 	return ${rv_rc}
@@ -537,7 +535,7 @@ subst_templates()
 	rc=$?
 	IFS="${__ifs}"
 
-	return_var $rc
+	return_var $rc $rc rc
 
 	log 'replaced templates in "%s" file' "${1#$DEST/}"
 }
