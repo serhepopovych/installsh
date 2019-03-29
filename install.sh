@@ -90,6 +90,53 @@ return_var()
 	return ${rv_rc}
 }
 
+# Usage: strlstrip <str> [chars] [<var_result>]
+strlstrip()
+{
+	local func="${FUNCNAME:-strlstrip}"
+
+	local str="$1"
+	local chars="${2:-
+	 }"
+
+	local prev_str="$str"
+
+	while :; do
+		str="${str#[$chars]}"
+		[ "$str" != "$prev_str" ] || break
+		prev_str="$str"
+	done
+
+	return_var 0 "$str" "$3"
+}
+
+# Usage: strrstrip <str> [chars] [<var_result>]
+strrstrip()
+{
+	local func="${FUNCNAME:-strrstrip}"
+
+	local str="$1"
+	local chars="${2:-
+	 }"
+
+	local prev_str="$str"
+
+	while :; do
+		str="${str%[$chars]}"
+		[ "$str" != "$prev_str" ] || break
+		prev_str="$str"
+	done
+
+	return_var 0 "$str" "$3"
+}
+
+# Usage: strstrip <str> [chars] [<var_result>]
+strstrip()
+{
+	local strip_str
+	strlstrip "$1" "$2" strip_str && strrstrip "$strip_str" "$2" "$3"
+}
+
 # Usage: normalize_path() <path> [<var_result>]
 normalize_path()
 {
@@ -159,13 +206,11 @@ subpath()
 	local path="${2:?missing 2d arg to ${func}() (<path>)}"
 	local p
 
-	p="${p%.}"
-	p="${path%%/}"
+	strrstrip "${path%.}" '/' p
 	# Terminate path with single '/' even if it is a file.
 	p="$p/"
 
-	prefix="${prefix%.}"
-	prefix="${prefix%%/}"
+	strrstrip "${prefix%.}" '/' prefix
 
 	# Outside of prefix directory?
 	[ -z "${p##$prefix/*}" ] || return
@@ -318,12 +363,13 @@ install_sh()
 		shift
 	done
 
-	local fd="${1##/}"
+	local fd
+	strlstrip "$1" '/' fd
 	[ -n "$fd" ] || return 0
 
 	local src="$sp/$fd"
 	[ -e "$src" ] || return 0
-	src="${src%%/}"
+	strrstrip "$src" '/' src
 	local dst="$dp/$fd"
 
 	local s d
@@ -634,7 +680,7 @@ install_dest()
 		local TP
 		while [ $# -gt 0 ]; do
 			TP="$ROOT/$1"
-			[ -e "$TP" ] || ln -snf "$RD/${1##/}" "$TP" || return
+			[ -e "$TP" ] || ln -snf "$RD/${1#/}" "$TP" || return
 			shift
 		done
 	fi
@@ -749,7 +795,7 @@ end_header_str="##### END ${NAME_UC} #####"
 
 if [ -z "$PARENT" ]; then
 	# System wide directory prefix
-	ROOT="${ROOT%%/}"
+	strrstrip "$ROOT" '/' ROOT
 	if [ -n "$ROOT" ]; then
 		# If not absolute path, assume current directory
 		[ -z "${ROOT##/*}" ] || ROOT="./$ROOT"
@@ -776,8 +822,7 @@ if [ -z "$PARENT" ]; then
 	export ROOT
 
 	# Make sure DEST is subpath under ROOT
-	DEST="${DEST%.}"
-	DEST="${DEST%%/}"
+	strrstrip "${DEST%.}" '/' DEST
 	if [ -n "$DEST" ]; then
 		# If not absolute path: make it relative to root
 		if [ -z "${DEST##/*}" ]; then
@@ -788,8 +833,9 @@ if [ -z "$PARENT" ]; then
 			DEST="/$DEST"
 		fi
 	fi
-	export RD="${DEST##/}"
-	export DEST="$ROOT$DEST"
+	strlstrip "$DEST" '/' RD
+	strlstrip "$ROOT$DEST" '/' DEST && DEST="/$DEST"
+	export RD DEST
 
 	# Destination on target system (useful for package build)
 	export TARGET="${TARGET:-$DEST}"
