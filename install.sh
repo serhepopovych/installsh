@@ -374,7 +374,10 @@ install_sh()
 
 	local s d
 
-	[ -L "$src" -o ! -d "$src" ] || src="$src/* $src/.*"
+	if [ ! -L "$src" -a -d "$src" ]; then
+		src="$src/* $src/.*"
+		dst="$dst/"
+	fi
 
 	d="$dst"
 	if [ ! -e "$d" ]; then
