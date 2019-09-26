@@ -780,11 +780,15 @@ prog_name="${0##*/}"
 L='G'
 
 # Try to determine SOURCE
-SOURCE="${0%/*}"
+SOURCE="${0%$prog_name}"
+SOURCE="${SOURCE:-.}"
 # Make it absolute path
-SOURCE="$(cd "$SOURCE" && echo "$PWD")" &&
+SOURCE="$(cd "$SOURCE" && echo "$PWD")"
+
+# Ensure script directory is correct
 [ "$SOURCE/install.sh" -ef "$0" -a -f "$SOURCE/vars-sh" ] ||
 	abort '%s: cannot find project location\n' "$prog_name"
+
 NAME="${SOURCE##*/}"
 NAME_UC="$(echo "$NAME" | tr '[:lower:]' '[:upper:]')"
 

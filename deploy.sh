@@ -64,9 +64,12 @@ prog_name="${0##*/}"
 ## Parse command line and prepare environment variables
 
 # Try to determine THIS_DIR
-THIS_DIR="${0%/*}"
+THIS_DIR="${0%$prog_name}"
+THIS_DIR="${THIS_DIR:-.}"
 # Make it absolute path
-THIS_DIR="$(cd "$THIS_DIR" && echo "$PWD")" &&
+THIS_DIR="$(cd "$THIS_DIR" && echo "$PWD")"
+
+# Ensure script directory is correct
 [ "$THIS_DIR/deploy.sh" -ef "$0" ] ||
 	abort 'cannot find directory containing this script\n'
 
