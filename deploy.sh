@@ -59,7 +59,7 @@ where
 prog_name="${0##*/}"
 
 # Verbosity: log only fatal errors
-[ "$V" -ge 0 -o "$V" -le 0 ] 2>/dev/null || V=0
+[ -n "$V" ] && [ "$V" -ge 0 -o "$V" -le 0 ] 2>/dev/null || V=0
 
 ## Parse command line and prepare environment variables
 
