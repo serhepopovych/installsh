@@ -786,7 +786,7 @@ SOURCE="${SOURCE:-.}"
 SOURCE="$(cd "$SOURCE" && echo "$PWD")"
 
 # Ensure script directory is correct
-[ "$SOURCE/install.sh" -ef "$0" -a -f "$SOURCE/vars-sh" ] ||
+[ -f "$SOURCE/install.sh" -a -f "$SOURCE/vars-sh" ] ||
 	abort '%s: cannot find project location\n' "$prog_name"
 
 NAME="${SOURCE##*/}"

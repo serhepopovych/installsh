@@ -70,7 +70,7 @@ THIS_DIR="${THIS_DIR:-.}"
 THIS_DIR="$(cd "$THIS_DIR" && echo "$PWD")"
 
 # Ensure script directory is correct
-[ "$THIS_DIR/deploy.sh" -ef "$0" ] ||
+[ -f "$THIS_DIR/deploy.sh" ] ||
 	abort 'cannot find directory containing this script\n'
 
 # Sane defaults
