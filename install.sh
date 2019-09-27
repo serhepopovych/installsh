@@ -619,15 +619,14 @@ reg_file_copy()
 	else
 		if [ -n "$DO_SUBST_TEMPLATES" ]; then
 			# Copy source to temporary destination
-			t="$(mktemp "$d.XXXXXXXX")" && cp -fd "$s" "$t" &&
+			t="$(mktemp "$d.XXXXXXXX")" && cp -fdp "$s" "$t" &&
 				exec_vars L='' -- subst_templates "$t" || return
 
 			if [ -d "$d" ] || ! cmp -s "$t" "$d"; then
 				# Backup if needed before installing
 				install_sh__backup "$d" || return
 				# Hard link temporary file
-				cp -fd $CP_OPTS -l "$t" "$d" &&
-					chmod -f --reference="$s" "$d" || return
+				cp -fd $CP_OPTS -l "$t" "$d" || return
 			fi
 			rm -f "$t" || return
 		else
