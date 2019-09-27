@@ -335,6 +335,8 @@ install_sh()
 	local dp="${2:?missing 2d arg to ${func}() (<dst_prefix>)}"
 	shift 2
 
+	local CP_OPTS
+
 	if [ -z "$SP" ]; then
 		# These variables are set once on initial install_sh()
 		# call and can change behaviour of function
@@ -353,7 +355,7 @@ install_sh()
 		# on above variables
 		local CP_OPTS_BACKUP="-S.${BACKUP:-inst-sh} -b"
 		local CP_OPTS_NORMAL='--remove-destination'
-		local CP_OPTS
+
 		CP_OPTS="${BACKUP:+$CP_OPTS_BACKUP}"
 		CP_OPTS="${CP_OPTS:-$CP_OPTS_NORMAL}"
 	fi
