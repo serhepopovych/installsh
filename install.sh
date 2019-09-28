@@ -232,7 +232,7 @@ same()
 	fi
 	# Symlinks and target is the same?
 	if [ -L "$d" -a -L "$s" -a \
-	     "$(readlink "$d")" = "$(readlink "$s")" ]; then
+	     "$(readlink -f "$d")" = "$(readlink -f "$s")" ]; then
 		return 0
 	fi
 	# Not a directory and content is the same?
