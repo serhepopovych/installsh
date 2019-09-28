@@ -242,6 +242,85 @@ same()
 	return 1
 }
 
+# Usage: copy [options] <source> <destination>
+copy()
+{
+	local func="${FUNCNAME:-copy}"
+
+	local opt_remove_destination=0
+	local opt_backup=0 opt_backup_suffix=''
+	local opt_dest=''
+	local opts=' ' nr_args c
+
+	while getopts 'fdlpRkbS:t:' c; do
+		case "$c" in
+			f|d|l|p|R)
+				# These are known and recognized by cp(1)
+				c="-$c"
+				[ -z "${opts##*$c*}" ] || opts="$opts$c "
+				;;
+			k)
+				# Use -k to represent this long option
+				opt_remove_destination=1
+				;;
+			b)
+				# Make backup of existing destination file
+				opt_backup=1
+				;;
+			S)
+				# Backup suffix
+				opt_backup_suffix="$OPTARG"
+				;;
+			t)
+				# Explicitly set destination directory
+				opt_dest="$OPTARG"
+				;;
+			*)
+				printf >&2 '%s: argument error "%s"\n' \
+					"${func}" "$c"
+				# Always reset to initial value
+				OPTIND=1
+				return 1
+				;;
+		esac
+	done
+	shift $((OPTIND - 1))
+	# Always reset to initial value
+	OPTIND=1
+
+	if [ -n "$opt_dest" ]; then
+		set -- "$@" "$opt_dest"
+	else
+		eval "opt_dest=\"\$$#\""
+	fi
+
+	if [ $# -lt 2 ]; then
+		printf >&2 \
+			'Usage: %s [opts] {<src> <dest>|-t <dest> <src>...}\n' \
+			"${func}"
+	fi
+
+	# -b, -S
+	if [ $opt_backup -gt 0 -a -e "$opt_dest" ]; then
+		opt_backup_suffix="${opt_backup_suffix:-~}"
+
+		[ -d "$opt_dest" ] && nr_args=$# || nr_args=2
+
+		while [ $((nr_args -= 1)) -gt 0 ]; do
+			eval "c=\"\$$nr_args\""
+			c="$opt_dest/${c##*/}"
+			mv -f "$c" "$c$opt_backup_suffix" 2>/dev/null ||:
+		done
+	fi
+
+	# -k (--remove-destination)
+	if [ $opt_remove_destination -gt 0 ]; then
+		[ -d "$opt_dest" ] || rm -f "$opt_dest" ||:
+	fi
+
+	cp $opts "$@"
+}
+
 # Following environment variables can override install_sh() functionality:
 #  SP     - source prefix set from <src_prefix> by initial install_sh() call
 #  DP     - destination prefix set from <dst_prefix> by inital install_sh() call
@@ -250,8 +329,7 @@ same()
 #  BACKUP - backup file extension or empty to disable backups (default: empty)
 #  EEXIST - fail when non-empty, destination file exists and backup either
 #           disabled or failed (default: empty)
-#  CP_OPTS - additional cp(1) options (default: --remove-destination when
-#            BACKUP is empty and '-S".$BACKUP" -b' when set)
+#  CP_OPTS - additional copy() options
 #  REG_FILE_COPY - copy regular file (default: install_sh__reg_file_copy())
 #  SCL_FILE_COPY - copy special file like device or socket
 #                  (default: install_sh__scl_file_copy())
@@ -309,7 +387,7 @@ install_sh__reg_file_copy()
 		# Backup if needed before installing
 		install_sh__backup "$d" || return
 		# Copy regular file
-		cp -fd $CP_OPTS "$s" "$d" || return
+		copy -fd $CP_OPTS "$s" "$d" || return
 	fi
 }
 
@@ -354,7 +432,7 @@ install_sh()
 		# These are set once too but their value depends
 		# on above variables
 		local CP_OPTS_BACKUP="-S.${BACKUP:-inst-sh} -b"
-		local CP_OPTS_NORMAL='--remove-destination'
+		local CP_OPTS_NORMAL='-k'
 
 		CP_OPTS="${BACKUP:+$CP_OPTS_BACKUP}"
 		CP_OPTS="${CP_OPTS:-$CP_OPTS_NORMAL}"
@@ -621,21 +699,21 @@ reg_file_copy()
 	else
 		if [ -n "$DO_SUBST_TEMPLATES" ]; then
 			# Copy source to temporary destination
-			t="$(mktemp "$d.XXXXXXXX")" && cp -fdp "$s" "$t" &&
+			t="$(mktemp "$d.XXXXXXXX")" && copy -fdp "$s" "$t" &&
 				exec_vars L='' -- subst_templates "$t" || return
 
 			if [ -d "$d" ] || ! cmp -s "$t" "$d"; then
 				# Backup if needed before installing
 				install_sh__backup "$d" || return
 				# Hard link temporary file
-				cp -fd $CP_OPTS -l "$t" "$d" || return
+				copy -fdl $CP_OPTS "$t" "$d" || return
 			fi
 			rm -f "$t" || return
 		else
 			# Backup if needed before installing
 			install_sh__backup "$d" || return
 			# Copy regular file
-			cp -fd $CP_OPTS "$s" "$d" || return
+			copy -fd $CP_OPTS "$s" "$d" || return
 		fi
 	fi
 
