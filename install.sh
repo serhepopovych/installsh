@@ -232,7 +232,7 @@ same()
 	fi
 	# Symlinks and target is the same?
 	if [ -L "$d" -a -L "$s" -a \
-	     "$(readlink -q "$d")" = "$(readlink -q "$s")" ]; then
+	     "$(readlink "$d")" = "$(readlink "$s")" ]; then
 		return 0
 	fi
 	# Not a directory and content is the same?
@@ -372,7 +372,7 @@ install_sh__reg_file_copy()
 	local d="${2:?missing 2d arg to ${func}() (<dst>)}"
 
 	if [ -L "$s" ]; then
-		t="$(cd "$SP" && readlink -m "$s")" || return
+		t="$(cd "$SP" && readlink -f "$s")" || return
 		# Outside of SP directory?
 		subpath "$SP" "$t" t || return
 		# Make path relative
@@ -679,17 +679,20 @@ reg_file_copy()
 	local t
 
 	if [ -L "$s" ]; then
-		t="$(cd "$SP" && readlink -m "$s")" || return
+		t="$(cd "$SP" && readlink -f "$s")" || return
 		# Outside of SP directory?
 		subpath "$SP" "$t" t || return
 		# Subproject responsibility?
 		[ -n "${t##*/.subprojects/*}" ] || return 0
 		# Make path relative: we do not expect symlinks from DEST
 		# to ROOT as pointless and DEST installed before ROOT
-		t="$(cd "$DP" && readlink -m "$DP$t")" || return
-		# Outside of DP directory?
-		subpath "$DP" "$t" t || return
 		t="$DP$t"
+		if [ -L "$t" ]; then
+			t="$(cd "$DP" && readlink -f "$t")" || return
+			# Outside of DP directory?
+			subpath "$DP" "$t" t || return
+			t="$DP$t"
+		fi
 		[ -e "$t" -o ! -d "$s" ] || mkdir -p "$t" || return
 		relative_path "$t" "$d" s || return
 		# Backup if needed before installing
@@ -738,7 +741,7 @@ install_root()
 			[ -L "$l" ] || continue
 
 			# Is it's target is RD?
-			lnk="$(readlink -q "$l")"
+			lnk="$(readlink "$l")"
 			[ -z "${lnk##$RD/*}" ] || continue
 
 			# Then remove it
