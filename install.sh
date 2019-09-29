@@ -581,7 +581,7 @@ exec_vars()
 			case "$c" in
 				s) subsep="$OPTARG" ;;
 				e) eval='eval' ;;
-				*) printf -- 'return 1'; return 0 ;;
+				*) printf -- 'return 1\n'; return 0 ;;
 			esac
 		done
 
