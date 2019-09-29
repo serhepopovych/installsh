@@ -50,6 +50,7 @@ to your project:
   # directory of installation unless explicitly given.
   $ ln -snf .subprojects/installsh/install.sh
   $ ln -snf .subprojects/installsh/deploy.sh
+  $ ln -snf .subprojects/installsh/alias-exec
 
   # Add default vars-sh
   $ cat >>vars-sh <<'_EOF'

@@ -1,0 +1,66 @@
+#!/bin/sh -e
+
+# Multitool binary provider. Default is 'busybox'.
+[ -n "$ALIAS_PROVIDER" ] ||
+	ALIAS_PROVIDER='busybox'
+
+# See executed script REQUIRES variable. Default is most common tools.
+[ -n "$ALIAS_REQUIRES" ] ||
+	ALIAS_REQUIRES="$REQUIRES \
+printf id mkdir rmdir ln cp mv rm readlink \
+chown chmod cmp mktemp sort tr sed \
+"
+
+################################################################################
+
+if [ -z "$THIS_DIR" ]; then
+	# This script file name (on most shells)
+	THIS_SCRIPT="$0"
+
+	# Program (script) name
+	prog_name="${THIS_SCRIPT##*/}"
+
+	# Try to determine THIS_DIR unless given
+	THIS_DIR="${THIS_SCRIPT%$prog_name}"
+	THIS_DIR="${THIS_DIR:-.}"
+	# Make it absolute path
+	THIS_DIR="$(cd "$THIS_DIR" && echo "$PWD")"
+fi
+
+if ! type "$ALIAS_PROVIDER" >/dev/null 2>&1; then
+	echo "$prog_name: multitool binary provider \"$ALIAS_PROVIDER\" not found" >&2
+	exit 1
+fi
+
+# Setup aliases
+for r in $ALIAS_REQUIRES; do
+	eval "$r() { '$ALIAS_PROVIDER' '$r' \"\$@\"; }"
+done
+
+# Setup helper to execute single alias (never export it)
+do_alias_func()
+{
+	"$IN_ALIAS_EXEC" "$@"
+}
+DO_ALIAS_EXEC='do_alias_func'
+
+if [ -n "$IN_ALIAS_EXEC" ]; then
+	# Only aliases is necessary here
+	return 0
+fi
+
+# Command to run
+if [ $# -le 0 ]; then
+	echo "Usage: $THIS_SCRIPT {deploy.sh|install.sh|...} <args>..." >&2
+	exit 2
+fi
+
+cmd="$1"
+[ -z "${cmd##*/*}" ] || cmd="$THIS_DIR/$cmd"
+shift
+
+# Always export it to indicate that aliases must be sourced by executed script
+export IN_ALIAS_EXEC="$ALIAS_PROVIDER"
+
+# Source rather than exec as we need to submit aliases
+. "$cmd" "$@"

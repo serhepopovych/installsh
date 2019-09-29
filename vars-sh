@@ -27,6 +27,9 @@ ROOTS="$ROOTS"'
 /srv
 /usr
 /var
+/android
+/system
+/online
 '
 
 SUBST_TEMPLATES="$SUBST_TEMPLATES"'

@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-# Rquires: mkdir(1), rm(1)
+REQUIRES='mkdir rm'
 
 ################################################################################
 
@@ -55,23 +55,37 @@ where
 	exit $rc
 }
 
-# Program (script) name
-prog_name="${0##*/}"
-
 # Verbosity: log only fatal errors
 [ -n "$V" ] && [ "$V" -ge 0 -o "$V" -le 0 ] 2>/dev/null || V=0
 
-## Parse command line and prepare environment variables
+if [ -z "$THIS_DIR" ]; then
+	# This script file name (on most shells)
+	THIS_SCRIPT="$0"
 
-# Try to determine THIS_DIR
-THIS_DIR="${0%$prog_name}"
-THIS_DIR="${THIS_DIR:-.}"
-# Make it absolute path
-THIS_DIR="$(cd "$THIS_DIR" && echo "$PWD")"
+	# Program (script) name
+	prog_name="${THIS_SCRIPT##*/}"
+
+	# Try to determine THIS_DIR unless given
+	THIS_DIR="${THIS_SCRIPT%$prog_name}"
+	THIS_DIR="${THIS_DIR:-.}"
+	# Make it absolute path
+	THIS_DIR="$(cd "$THIS_DIR" && echo "$PWD")"
+fi
+
+# Setup aliases if we re-executed or forced by setting IN_ALIAS_EXEC
+[ -z "$IN_ALIAS_EXEC" -o -n "$DO_ALIAS_EXEC" ] || . "$THIS_DIR/alias-exec"
 
 # Ensure script directory is correct
 [ -f "$THIS_DIR/deploy.sh" ] ||
 	abort 'cannot find directory containing this script\n'
+
+# Adjust environment if sourced from another script
+if [ "$prog_name" != 'deploy.sh' ]; then
+	prog_name='deploy.sh'
+	THIS_SCRIPT="$THIS_DIR/$prog_name"
+fi
+
+## Parse command line and prepare environment variables
 
 # Sane defaults
 DFLT_SOURCE="${THIS_DIR}"

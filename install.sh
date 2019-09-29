@@ -1,7 +1,6 @@
 #!/bin/sh -e
 
-# Requires: id(1), mkdir(1), ln(1), cp(1), mv(1), rm(1), readlink(1), sed(1)
-# Requires: chown(1), chmod(1), cmp(1), mktemp(1), sort(1), tr(1), rmdir(1)
+REQUIRES='printf id mkdir rmdir ln cp mv rm readlink chown chmod cmp mktemp sort tr sed'
 
 # Usage: pass() [...]
 pass()
@@ -852,24 +851,40 @@ prepare_file()
 
 ################################################################################
 
-# Program (script) name
-prog_name="${0##*/}"
-
 # Verbosity: report errors by default
 [ -n "$V" ] && [ "$V" -le 0 -o "$V" -ge 0 ] 2>/dev/null || V=1
+
+if [ -z "$THIS_DIR" ]; then
+	# This script file name (on most shells)
+	THIS_SCRIPT="$0"
+
+	# Program (script) name
+	prog_name="${THIS_SCRIPT##*/}"
+
+	# Try to determine THIS_DIR unless given
+	THIS_DIR="${THIS_SCRIPT%$prog_name}"
+	THIS_DIR="${THIS_DIR:-.}"
+	# Make it absolute path
+	THIS_DIR="$(cd "$THIS_DIR" && echo "$PWD")"
+fi
+
+# Setup aliases if we re-executed or forced by setting IN_ALIAS_EXEC
+[ -z "$IN_ALIAS_EXEC" -o -n "$DO_ALIAS_EXEC" ] || . "$THIS_DIR/alias-exec"
+
+# Ensure script directory is correct
+[ -f "$THIS_DIR/install.sh" -a -f "$THIS_DIR/vars-sh" ] ||
+	abort '%s: cannot find project location\n' "$prog_name"
+
+# Adjust environment if sourced from another script
+if [ "$prog_name" != 'install.sh' ]; then
+	prog_name='install.sh'
+	THIS_SCRIPT="$THIS_DIR/$prog_name"
+fi
 
 # Logging facility: G - Global
 L='G'
 
-# Try to determine SOURCE
-SOURCE="${0%$prog_name}"
-SOURCE="${SOURCE:-.}"
-# Make it absolute path
-SOURCE="$(cd "$SOURCE" && echo "$PWD")"
-
-# Ensure script directory is correct
-[ -f "$SOURCE/install.sh" -a -f "$SOURCE/vars-sh" ] ||
-	abort '%s: cannot find project location\n' "$prog_name"
+SOURCE="${THIS_DIR}"
 
 NAME="${SOURCE##*/}"
 NAME_UC="$(echo "$NAME" | tr '[:lower:]' '[:upper:]')"
