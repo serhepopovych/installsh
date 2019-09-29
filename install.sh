@@ -585,7 +585,7 @@ exec_vars()
 			esac
 		done
 
-		printf -- 'nr="%s" subsep="%s" eval="%s"\n' \
+		printf -- "nr='%s' subsep='%s' eval='%s'\n" \
 			$((OPTIND - 1)) "$subsep" "$eval"
 	)"
 	shift "$nr"
