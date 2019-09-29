@@ -77,7 +77,7 @@ fi
 
 # Ensure script directory is correct
 [ -f "$THIS_DIR/deploy.sh" ] ||
-	abort 'cannot find directory containing this script\n'
+	abort '%s: cannot find project location\n' "$prog_name"
 
 # Adjust environment if sourced from another script
 if [ "$prog_name" != 'deploy.sh' ]; then
