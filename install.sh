@@ -246,6 +246,9 @@ copy()
 {
 	local func="${FUNCNAME:-copy}"
 
+	local optind="$OPTIND"
+	local optarg="$OPTARG"
+
 	local opt_remove_destination=0
 	local opt_backup=0 opt_backup_suffix=''
 	local opt_dest=''
@@ -277,15 +280,16 @@ copy()
 			*)
 				printf >&2 '%s: argument error "%s"\n' \
 					"${func}" "$c"
-				# Always reset to initial value
-				OPTIND=1
+				OPTARG="$optarg"
+				OPTIND="$optind"
 				return 1
 				;;
 		esac
 	done
 	shift $((OPTIND - 1))
-	# Always reset to initial value
-	OPTIND=1
+
+	OPTARG="$optarg"
+	OPTIND="$optind"
 
 	if [ -n "$opt_dest" ]; then
 		set -- "$@" "$opt_dest"
@@ -566,28 +570,27 @@ exec_vars()
 		shift
 	done
 
-	# Parse <func opts> using getopts(1) in subshell to avoid
-	# collision with possible outer getopts(1) usage (i.e. when
-	# we are called form getopts(1) processing loop).
+	# Parse <func opts> using getopts(1). To avoid collision
+	# with possible outer getopts(1) usage (i.e. when we are
+	# called form getopts(1) processing loop) save/restore
+	# OPTIND and OPTARG variables before call to getopts(1).
+
+	local optind="$OPTIND"
+	local optarg="$OPTARG"
+
 	local nr=0 subsep='' eval=''
-	eval "$(
-		# To communicate with outside of this subshell
-		# provide evaluable statements on standard output.
 
-		# Subshell local variables: c, subsep, eval
+	while getopts 's:e' c; do
+		case "$c" in
+			s) subsep="$OPTARG" ;;
+			e) eval='eval' ;;
+			*) OPTARG="$optarg"; OPTIND="$optind"; return 1 ;;
+		esac
+	done
+	shift $((OPTIND - 1))
 
-		while getopts 's:e' c; do
-			case "$c" in
-				s) subsep="$OPTARG" ;;
-				e) eval='eval' ;;
-				*) printf -- 'return 1\n'; return 0 ;;
-			esac
-		done
-
-		printf -- "nr='%s' subsep='%s' eval='%s'\n" \
-			$((OPTIND - 1)) "$subsep" "$eval"
-	)"
-	shift "$nr"
+	OPTARG="$optarg"
+	OPTIND="$optind"
 
 	local command="$1"
 	shift
