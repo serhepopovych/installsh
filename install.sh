@@ -689,7 +689,7 @@ reg_file_copy()
 		# Make path relative: we do not expect symlinks from DEST
 		# to ROOT as pointless and DEST installed before ROOT
 		t="$DP$t"
-		if [ -L "$t" ]; then
+		if [ -e "${t%/*}" ]; then
 			t="$(cd "$DP" && readlink -f "$t")" || return
 			# Outside of DP directory?
 			subpath "$DP" "$t" t || return
