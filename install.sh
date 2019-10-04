@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-REQUIRES='printf id mkdir rmdir ln cp mv rm readlink chown chmod cmp mktemp sort tr sed'
+REQUIRES='printf id stat mkdir rmdir ln cp mv rm readlink chown chmod cmp mktemp sort tr sed'
 
 # Usage: pass() [...]
 pass()
@@ -704,14 +704,16 @@ reg_file_copy()
 	else
 		if [ -n "$DO_SUBST_TEMPLATES" ]; then
 			# Copy source to temporary destination
-			t="$(mktemp "$d.XXXXXXXX")" && copy -fdp "$s" "$t" &&
+			t="$(mktemp "$d.XXXXXXXX")" && copy -fd "$s" "$t" &&
 				exec_vars L='' -- subst_templates "$t" || return
 
 			if [ -d "$d" ] || ! cmp -s "$t" "$d"; then
 				# Backup if needed before installing
 				install_sh__backup "$d" || return
 				# Hard link temporary file
-				copy -fdl $CP_OPTS "$t" "$d" || return
+				copy -fdl $CP_OPTS "$t" "$d" &&
+					chmod -f "$(stat -c '0%a' "$s")" "$d" ||
+					return
 			fi
 			rm -f "$t" || return
 		else
