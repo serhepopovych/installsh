@@ -49,12 +49,13 @@ log()
 	shift
 	local verdict
 
-	if [ -z "$LOG_MSG" ]; then
+	if [ -z "${LOG_MSG-}" ]; then
 		[ $rc -eq 0 ] && verdict='success' || verdict='failure'
 	else
 		verdict=''
 	fi
 
+	local L="${L-}"
 	[ ${#L} -ne 1 ] || eval printf ${INSTALL_LOG:+>>"'$INSTALL_LOG'"} -- \
 		"'%s: %s: ${fmt}%s'" "'${NAME:-unknown}'" "'$L'" '"$@"' \
 		"'${verdict:+: $verdict
@@ -77,8 +78,8 @@ return_var()
 	local func="${FUNCNAME:-return_var}"
 
 	local rv_rc="${1:?missing 1st arg to ${func}() (<rc>)}"
-	local rv_result="$2"
-	local rv_var="$3"
+	local rv_result="${2-}"
+	local rv_var="${3-}"
 
 	if [ -n "${rv_var}" ]; then
 		eval "${rv_var}='${rv_result}'"
@@ -89,10 +90,10 @@ return_var()
 	return ${rv_rc}
 }
 
-# Usage: strlstrip <str> [chars] [<var_result>]
-strlstrip()
+# Usage: __stripdir__=[#%] _strstrip <str> [chars]
+_strstrip()
 {
-	local func="${FUNCNAME:-strlstrip}"
+	local func="${func:-_strstrip}"
 
 	local str="$1"
 	local chars="${2:-
@@ -101,39 +102,52 @@ strlstrip()
 	local prev_str="$str"
 
 	while :; do
-		str="${str#[$chars]}"
+		eval "str=\"\${str${__stripdir__}[\$chars]}\""
 		[ "$str" != "$prev_str" ] || break
 		prev_str="$str"
 	done
 
-	return_var 0 "$str" "$3"
+	return_var 0 "$str" '__stripret__'
+}
+
+# Usage: strlstrip <str> [chars] [<var_result>]
+strlstrip()
+{
+	local func="${FUNCNAME:-strlstrip}"
+	local __stripdir__='#'
+	local __stripret__
+
+	_strstrip "$@" || return
+
+	return_var 0 "${__stripret__}" "${3-}"
 }
 
 # Usage: strrstrip <str> [chars] [<var_result>]
 strrstrip()
 {
 	local func="${FUNCNAME:-strrstrip}"
+	local __stripdir__='%'
+	local __stripret__
 
-	local str="$1"
-	local chars="${2:-
-	 }"
+	_strstrip "$@" || return
 
-	local prev_str="$str"
-
-	while :; do
-		str="${str%[$chars]}"
-		[ "$str" != "$prev_str" ] || break
-		prev_str="$str"
-	done
-
-	return_var 0 "$str" "$3"
+	return_var 0 "${__stripret__}" "${3-}"
 }
 
 # Usage: strstrip <str> [chars] [<var_result>]
 strstrip()
 {
-	local strip_str
-	strlstrip "$1" "$2" strip_str && strrstrip "$strip_str" "$2" "$3"
+	local func="${FUNCNAME:-strstrip}"
+	local __stripdir__
+	local __stripret__
+
+	__stripdir__='#' && _strstrip "$@" || return
+
+	shift && set -- "${__stripret__}" "$@"
+
+	__stripdir__='%' && _strstrip "$@" || return
+
+	return_var 0 "${__stripret__}" "${3-}"
 }
 
 # Usage: normalize_path() <path> [<var_result>]
@@ -205,7 +219,7 @@ relative_path()
 		  sed -e 's|\(/[^/]\+\)|../|g')${rp_src}" || \
 		return
 
-	return_var 0 "${rp_dst}" "$3"
+	return_var 0 "${rp_dst}" "${3-}"
 }
 
 # Usage: subpath <prefix> <path> [<var_result>]
@@ -226,7 +240,7 @@ subpath()
 	# Outside of prefix directory?
 	[ -z "${p##$prefix/*}" ] || return
 
-	return_var 0 "${path#$prefix}" "$3"
+	return_var 0 "${path#$prefix}" "${3-}"
 }
 
 # Usage: same <s> <d>
@@ -869,9 +883,9 @@ prepare_file()
 ################################################################################
 
 # Verbosity: report errors by default
-[ -n "$V" ] && [ "$V" -le 0 -o "$V" -ge 0 ] 2>/dev/null || V=1
+[ -n "${V-}" ] && [ "$V" -le 0 -o "$V" -ge 0 ] 2>/dev/null || V=1
 
-if [ -z "$THIS_DIR" ]; then
+if [ -z "${THIS_DIR-}" ]; then
 	# This script file name (on most shells)
 	THIS_SCRIPT="$0"
 
@@ -886,14 +900,14 @@ if [ -z "$THIS_DIR" ]; then
 fi
 
 # Setup aliases if we re-executed or forced by setting IN_ALIAS_EXEC
-[ -z "$IN_ALIAS_EXEC" -o -n "$DO_ALIAS_EXEC" ] || . "$THIS_DIR/alias-exec"
+[ -z "${IN_ALIAS_EXEC-}" -o -n "${DO_ALIAS_EXEC-}" ] || . "$THIS_DIR/alias-exec"
 
 # Ensure script directory is correct
 [ -f "$THIS_DIR/install.sh" -a -f "$THIS_DIR/vars-sh" ] ||
 	abort '%s: cannot find project location\n' "$prog_name"
 
 # Adjust environment if sourced from another script
-if [ "$prog_name" != 'install.sh' ]; then
+if [ "${prog_name-}" != 'install.sh' ]; then
 	prog_name='install.sh'
 	THIS_SCRIPT="$THIS_DIR/$prog_name"
 fi
@@ -914,9 +928,9 @@ end_header_str="##### END ${NAME_UC} #####"
 [ ! -L "$SOURCE/install.sh" ] &&
 	AS_BASE="$NAME" || AS_BASE=
 
-if [ -z "$PARENT" ]; then
+if [ -z "${PARENT-}" ]; then
 	# System wide directory prefix
-	strrstrip "$ROOT" '/' ROOT
+	strrstrip "${ROOT-}" '/' ROOT
 	if [ -n "$ROOT" ]; then
 		# If not absolute path, assume current directory
 		[ -z "${ROOT##/*}" ] || ROOT="./$ROOT"
@@ -943,6 +957,7 @@ if [ -z "$PARENT" ]; then
 	export ROOT
 
 	# Make sure DEST is subpath under ROOT
+	DEST="${DEST-}"
 	strrstrip "${DEST%.}" '/' DEST
 	if [ -n "$DEST" ]; then
 		# If not absolute path: make it relative to root
@@ -1019,7 +1034,7 @@ trap exit_handler EXIT
 . "$SOURCE/vars-sh"
 
 # Prepare templates
-SUBST_TEMPLATES="$(echo "$SUBST_TEMPLATES" |sort -u)"
+SUBST_TEMPLATES="$(echo "${SUBST_TEMPLATES-}" |sort -u)"
 
 # Call subprojects install
 log_msg '---- Start subproject installations ----\n'
