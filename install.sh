@@ -142,17 +142,29 @@ normalize_path()
 	local func="${FUNCNAME:-normalize_path}"
 
 	local path="${1:?missing 1st arg to ${func}() (<path>)}"
-	local file=''
+	local file='' p
+
+	local rc=0
 
 	if [ ! -d "${path}" ]; then
 		file="${path##*/}"
-		[ -n "$file" ] || return
-		path="${path%/*}"
-		[ -d "$path" ] || return
+		if [ -n "$file" ]; then
+			p="${path%/*}/"
+			[ -d "$p" ] && path="$p" || rc=''
+		else
+			rc=''
+		fi
 	fi
 
-	cd "${path}" && path="${PWD}${file:+/$file}" && cd - >/dev/null
-	return_var $? "$path" "$2"
+	if [ -n "$rc" ]; then
+		cd "${path}" &&
+			path="${PWD%/}/${file}" &&
+		cd - >/dev/null || rc=$?
+	else
+		rc=0
+	fi
+
+	return_var $rc "$path" "${2-}"
 }
 
 # Usage: relative_path <src> <dst> [<var_result>]
